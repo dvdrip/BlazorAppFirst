@@ -1,0 +1,69 @@
+@page "/new-build-website"
+
+<h1 class="h3">New Build Website</h1>
+
+<p class="text-muted">A compact list of useful links to visit after building a PC. Type to filter the list.</p>
+
+<input id="nbw-search" class="form-control mb-3" placeholder="Search links..." @bind-value="searchTerm" @bind-value:event="oninput" />
+
+<div class="small text-muted mb-2">Debug: searchTerm="@searchTerm" — Results: @FilteredLinks.Count()</div>
+
+@if (!FilteredLinks.Any())
+{
+    <div class="alert alert-secondary">No results</div>
+}
+else
+{
+    <ul class="list-group" id="nbw-list">
+        @foreach (var item in FilteredLinks)
+        {
+            <li class="list-group-item" data-search="@($"{item.Name} {item.Description}" )">
+                <a href="@item.Url" target="_blank" rel="noopener noreferrer">@item.Name</a>
+                @if (!string.IsNullOrWhiteSpace(item.Description))
+                {
+                    <div class="small text-muted">@item.Description</div>
+                }
+            </li>
+        }
+    </ul>
+
+    <script src="/js/newbuild-filter.js"></script>
+}
+
+@code {
+    string searchTerm = string.Empty;
+
+    class LinkItem
+    {
+        public string Name { get; init; }
+        public string Url { get; init; }
+        public string Description { get; init; }
+    }
+
+    List<LinkItem> links = new()
+    {
+        new() { Name = "Ninite", Url = "https://www.ninite.com/", Description = "Batch install essential apps" },
+        new() { Name = "Google Chrome", Url = "https://www.google.com/chrome/", Description = "Browser" },
+        new() { Name = "Mozilla Firefox", Url = "https://www.mozilla.org/firefox/new/", Description = "Browser" },
+        new() { Name = "Windows Update", Url = "https://www.microsoft.com/windows", Description = "OS updates and drivers" },
+        new() { Name = "HWiNFO", Url = "https://www.hwinfo.com/", Description = "Hardware monitoring" },
+        new() { Name = "CrystalDiskInfo", Url = "https://crystalmark.info/en/software/crystaldiskinfo/", Description = "Drive health" },
+        new() { Name = "Malwarebytes", Url = "https://www.malwarebytes.com/", Description = "Malware scanner" },
+        new() { Name = "CPU Benchmark", Url = "https://www.cpubenchmark.net/", Description = "Compare CPU performance" }
+    };
+
+    IEnumerable<LinkItem> FilteredLinks
+    {
+        get
+        {
+            var term = (searchTerm ?? string.Empty).Trim();
+            if (string.IsNullOrEmpty(term))
+                return links;
+
+            return links.Where(l =>
+                l.Name.Contains(term, StringComparison.OrdinalIgnoreCase)
+                || (l.Description?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false)
+            );
+        }
+    }
+}
