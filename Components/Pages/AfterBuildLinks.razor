@@ -1,0 +1,130 @@
+@page "/after-build-links"
+
+@inject IJSRuntime JS
+
+<div class="page-header mb-4">
+    <h1 class="h3">Useful Internet Links — After Building Your PC</h1>
+    <p class="text-muted mb-0">Curated, actionable links to get a new or rebuilt PC ready: installers, drivers, monitoring and security.</p>
+</div>
+
+<div class="mb-3 d-flex gap-2">
+    <input class="form-control" placeholder="Search links or filter by category..." @bind-value="searchTerm" @bind-value:event="oninput" />
+    <div class="btn-group">
+        <button class="btn btn-outline-secondary" @onclick="() => SetCategory(null)" aria-pressed="@(selectedCategory==null)">All</button>
+        @foreach (var c in Categories)
+        {
+            <button class="btn btn-outline-secondary" @onclick="() => SetCategory(c)" aria-pressed="@(selectedCategory==c)">@c</button>
+        }
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(copyMessage))
+{
+    <div class="alert alert-success py-2">@copyMessage</div>
+}
+
+<div class="row">
+    @foreach (var link in FilteredLinks)
+    {
+        <div class="col-12 col-md-6 col-lg-4 mb-3">
+            <div class="card h-100 link-card">
+                <div class="card-body d-flex align-items-start">
+                    <img class="site-icon me-3" src="@GetFavicon(link.Url)" alt="@link.Name icon" />
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <h5 class="card-title mb-1">@link.Name</h5>
+                        </div>
+                        <div class="mb-2">
+                            @foreach (var t in link.Tags)
+                            {
+                                <span class="badge bg-secondary me-1">@t</span>
+                            }
+                        </div>
+                        <p class="card-text small text-muted mb-2">@link.Description</p>
+                        <div class="btn-row">
+                            <a class="btn btn-sm btn-primary me-1" href="@link.Url" target="_blank" rel="noopener noreferrer">Open</a>
+                            <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => CopyToClipboard(link.Url)">Copy</button>
+                            <a class="btn btn-sm btn-outline-info" href="https://www.google.com/search?q=@Uri.EscapeDataString(link.Name)" target="_blank" rel="noopener noreferrer">Search</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    string searchTerm;
+    string selectedCategory;
+    string copyMessage;
+
+    class LinkItem
+    {
+        public string Name { get; set; }
+        public string Url { get; set; }
+        public string Description { get; set; }
+        public List<string> Tags { get; set; } = new();
+    }
+
+    List<LinkItem> links = new()
+    {
+        new() { Name = "Ninite", Url = "https://www.ninite.com/", Description = "Batch install essential apps", Tags = new(){ "Tools", "Install" } },
+        new() { Name = "Google Chrome", Url = "https://www.google.com/chrome/", Description = "Browser", Tags = new(){ "Browsers", "Browser" } },
+        new() { Name = "Mozilla Firefox", Url = "https://www.mozilla.org/firefox/new/", Description = "Browser", Tags = new(){ "Browsers", "Browser" } },
+        new() { Name = "Windows Update", Url = "https://www.microsoft.com/windows", Description = "OS updates and drivers", Tags = new(){ "Drivers", "OS" } },
+        new() { Name = "FurMark", Url = "https://geeks3d.com/furmark/", Description = "GPU stress test", Tags = new(){ "Testing", "GPU" } },
+        new() { Name = "CPU Benchmark", Url = "https://www.cpubenchmark.net/", Description = "Compare CPU performance", Tags = new(){ "Testing", "CPU" } },
+        new() { Name = "HWiNFO", Url = "https://www.hwinfo.com/", Description = "Hardware monitoring", Tags = new(){ "Monitoring", "Hardware" } },
+        new() { Name = "CrystalDiskInfo", Url = "https://crystalmark.info/en/software/crystaldiskinfo/", Description = "Drive health", Tags = new(){ "Monitoring", "Storage" } },
+        new() { Name = "Malwarebytes", Url = "https://www.malwarebytes.com/", Description = "Malware scanner", Tags = new(){ "Security", "Antimalware" } },
+        new() { Name = "Windows Media Creation", Url = "https://www.microsoft.com/en-us/software-download/windows10", Description = "Media Creation Tool", Tags = new(){ "Guides", "OS" } },
+        new() { Name = "Microsoft Docs", Url = "https://learn.microsoft.com/", Description = "Official docs and troubleshooting", Tags = new(){ "Guides", "Docs" } },
+        new() { Name = "Lifewire Free Software Guide", Url = "https://www.lifewire.com/best-free-software-4129405", Description = "Suggested free tools and guides", Tags = new(){ "Guides", "Recommendations" } }
+    };
+
+    IEnumerable<string> Categories => links.SelectMany(l => l.Tags).Distinct().OrderBy(c => c);
+
+    IEnumerable<LinkItem> FilteredLinks => links.Where(l =>
+        (string.IsNullOrWhiteSpace(selectedCategory) || l.Tags.Contains(selectedCategory))
+        && (string.IsNullOrWhiteSpace(searchTerm) || (l.Name + " " + l.Description + " " + string.Join(' ', l.Tags)).Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+    );
+
+    void SetCategory(string cat)
+    {
+        // toggle
+        if (selectedCategory == cat)
+            selectedCategory = null;
+        else
+            selectedCategory = cat;
+    }
+
+    string GetFavicon(string url)
+    {
+        try
+        {
+            var uri = new Uri(url);
+            var host = uri.Host;
+            return $"https://www.google.com/s2/favicons?sz=64&domain={host}";
+        }
+        catch
+        {
+            return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Crect width='100%25' height='100%25' fill='%23ddd'/%3E%3Ctext x='50%25' y='55%25' font-size='20' fill='%23666' text-anchor='middle'%3E?%3C/text%3E%3C/svg%3E";
+        }
+    }
+
+    async Task CopyToClipboard(string url)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", url);
+            copyMessage = "Link copied to clipboard";
+            StateHasChanged();
+            _ = Task.Delay(2000).ContinueWith(_ => { copyMessage = null; InvokeAsync(StateHasChanged); });
+        }
+        catch
+        {
+            copyMessage = "Unable to copy. Use the Open button or copy manually.";
+            _ = Task.Delay(3000).ContinueWith(_ => { copyMessage = null; InvokeAsync(StateHasChanged); });
+        }
+    }
+}
